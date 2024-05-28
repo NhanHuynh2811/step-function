@@ -1,0 +1,948 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "ServerlessDeploymentBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ServerlessDeploymentBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "ServerlessDeploymentBucket"
+        },
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "s3:*",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Resource": [
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      },
+                      "/*"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":s3:::",
+                      {
+                        "Ref": "ServerlessDeploymentBucket"
+                      }
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "CreateDashloanDashaccountLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/lambda-create-loan-account"
+      }
+    },
+    "ApproveDashloanDashaccountLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/lambda-approve-loan-account"
+      }
+    },
+    "NotifyDashforDashoperationDashloanDashaccountLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/lambda-notify-for-operation-failure-approve"
+      }
+    },
+    "NotifyDashcreateDashloanDashfailureDashaccountLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/lambda-notify-create-loan-failure"
+      }
+    },
+    "CalculateDashnextDashintervalLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/lambda-calculate-next-interval"
+      }
+    },
+    "EnrichDashinputDashloanDashcreationLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/lambda-enrich-input-loan-creation"
+      }
+    },
+    "IamRoleLambdaExecution": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "test-step-function-poc",
+                  "dev",
+                  "lambda"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:CreateLogGroup",
+                    "logs:TagResource"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-create-loan-account:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-approve-loan-account:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-notify-for-operation-failure-approve:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-notify-create-loan-failure:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-calculate-next-interval:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-enrich-input-loan-creation:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-create-loan-account:*:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-approve-loan-account:*:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-notify-for-operation-failure-approve:*:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-notify-create-loan-failure:*:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-calculate-next-interval:*:*"
+                    },
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/lambda-enrich-input-loan-creation:*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "states:StartExecution",
+                    "states:SendTaskSuccess",
+                    "states:SendTaskFailure"
+                  ],
+                  "Resource": "arn:aws:states:us-east-1:730335300542:stateMachine:MoreTymeRepaymentWorkflow"
+                },
+                {
+                  "Effect": "Allow",
+                  "Sid": "AllowActionOnSQS",
+                  "Action": [
+                    "sqs:ReceiveMessage",
+                    "sqs:SendMessage",
+                    "sqs:DeleteMessage",
+                    "sqs:GetQueueUrl"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:ReceiveMessage",
+                    "sqs:DeleteMessage",
+                    "sqs:GetQueueAttributes"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs"
+                    },
+                    {
+                      "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "test-step-function-poc",
+              "dev",
+              {
+                "Ref": "AWS::Region"
+              },
+              "lambdaRole"
+            ]
+          ]
+        }
+      }
+    },
+    "PythonRequirementsLambdaLayer": {
+      "Type": "AWS::Lambda::LayerVersion",
+      "Properties": {
+        "Content": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/pythonRequirements.zip"
+        },
+        "LayerName": "test-step-function-poc-dev-python-requirements",
+        "Description": "Python requirements generated by serverless-python-requirements.",
+        "CompatibleRuntimes": [
+          "python3.9"
+        ]
+      }
+    },
+    "CreateDashloanDashaccountLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/create-loan-account.zip"
+        },
+        "Handler": "src/lambda_step_function/create_loan_account.handle",
+        "Runtime": "python3.9",
+        "FunctionName": "lambda-create-loan-account",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Architectures": [
+          "arm64"
+        ],
+        "Environment": {
+          "Variables": {
+            "RUNNING_STAGE": "dev",
+            "EXTENSION_DEBUG": "false",
+            "TZ": "Asia/Ho_Chi_Minh"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        },
+        "Layers": [
+          {
+            "Ref": "PythonRequirementsLambdaLayer"
+          }
+        ]
+      },
+      "DependsOn": [
+        "CreateDashloanDashaccountLogGroup"
+      ]
+    },
+    "ApproveDashloanDashaccountLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/approve-loan-account.zip"
+        },
+        "Handler": "src/lambda_step_function/approve_loan_account.handle",
+        "Runtime": "python3.9",
+        "FunctionName": "lambda-approve-loan-account",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Architectures": [
+          "arm64"
+        ],
+        "Environment": {
+          "Variables": {
+            "RUNNING_STAGE": "dev",
+            "EXTENSION_DEBUG": "false",
+            "TZ": "Asia/Ho_Chi_Minh"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        },
+        "Layers": [
+          {
+            "Ref": "PythonRequirementsLambdaLayer"
+          }
+        ]
+      },
+      "DependsOn": [
+        "ApproveDashloanDashaccountLogGroup"
+      ]
+    },
+    "NotifyDashforDashoperationDashloanDashaccountLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/notify-for-operation-loan-account.zip"
+        },
+        "Handler": "src/lambda_step_function/notify-for-operation_loan_account.handle",
+        "Runtime": "python3.9",
+        "FunctionName": "lambda-notify-for-operation-failure-approve",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Architectures": [
+          "arm64"
+        ],
+        "Environment": {
+          "Variables": {
+            "RUNNING_STAGE": "dev",
+            "EXTENSION_DEBUG": "false",
+            "TZ": "Asia/Ho_Chi_Minh"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "NotifyDashforDashoperationDashloanDashaccountLogGroup"
+      ]
+    },
+    "NotifyDashcreateDashloanDashfailureDashaccountLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/notify-create-loan-failure-account.zip"
+        },
+        "Handler": "src/lambda_step_function/notify_create_failure_loan.handle",
+        "Runtime": "python3.9",
+        "FunctionName": "lambda-notify-create-loan-failure",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Architectures": [
+          "arm64"
+        ],
+        "Environment": {
+          "Variables": {
+            "RUNNING_STAGE": "dev",
+            "EXTENSION_DEBUG": "false",
+            "TZ": "Asia/Ho_Chi_Minh"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "NotifyDashcreateDashloanDashfailureDashaccountLogGroup"
+      ]
+    },
+    "CalculateDashnextDashintervalLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/calculate-next-interval.zip"
+        },
+        "Handler": "src/lambda_step_function/calculate_next_interval.handle",
+        "Runtime": "python3.9",
+        "FunctionName": "lambda-calculate-next-interval",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Architectures": [
+          "arm64"
+        ],
+        "Environment": {
+          "Variables": {
+            "RUNNING_STAGE": "dev",
+            "EXTENSION_DEBUG": "false",
+            "TZ": "Asia/Ho_Chi_Minh"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "CalculateDashnextDashintervalLogGroup"
+      ]
+    },
+    "EnrichDashinputDashloanDashcreationLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Ref": "ServerlessDeploymentBucket"
+          },
+          "S3Key": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/enrich-input-loan-creation.zip"
+        },
+        "Handler": "src/lambda_step_function/enrich_input_loan_creation.handle",
+        "Runtime": "python3.9",
+        "FunctionName": "lambda-enrich-input-loan-creation",
+        "MemorySize": 128,
+        "Timeout": 6,
+        "Architectures": [
+          "arm64"
+        ],
+        "Environment": {
+          "Variables": {
+            "RUNNING_STAGE": "dev",
+            "EXTENSION_DEBUG": "false",
+            "TZ": "Asia/Ho_Chi_Minh"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "EnrichDashinputDashloanDashcreationLogGroup"
+      ]
+    },
+    "NotifyDashcreateDashloanDashfailureDashaccountLambdaVersione5a1bkDM6U8mu4NmsdAEcvz1MuVQVDw5UfLMkSdy38": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "NotifyDashcreateDashloanDashfailureDashaccountLambdaFunction"
+        },
+        "CodeSha256": "26N57tL/4PdDre06RB0MyaTzQh8xkwdYEfPYP/6LKDk="
+      }
+    },
+    "NotifyDashforDashoperationDashloanDashaccountLambdaVersionAsYADzxczfqgjS0HinKCprdMAO6Jfm1zSUz40DxrL8": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "NotifyDashforDashoperationDashloanDashaccountLambdaFunction"
+        },
+        "CodeSha256": "26N57tL/4PdDre06RB0MyaTzQh8xkwdYEfPYP/6LKDk="
+      }
+    },
+    "CalculateDashnextDashintervalLambdaVersionXKgpqcqMVZyVImRaqaRLDePREzL3Top9Gl6xI23i4": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "CalculateDashnextDashintervalLambdaFunction"
+        },
+        "CodeSha256": "26N57tL/4PdDre06RB0MyaTzQh8xkwdYEfPYP/6LKDk="
+      }
+    },
+    "EnrichDashinputDashloanDashcreationLambdaVersionqkI1I9lofK0bI6i60BgkthEsabDch3oRlkdqZLP1WA": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "EnrichDashinputDashloanDashcreationLambdaFunction"
+        },
+        "CodeSha256": "26N57tL/4PdDre06RB0MyaTzQh8xkwdYEfPYP/6LKDk="
+      }
+    },
+    "CreateDashloanDashaccountLambdaVersionyTHOps9QcmibzzUSSH23n8LSA6e9zEkFV05SUi5FViw": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "CreateDashloanDashaccountLambdaFunction"
+        },
+        "CodeSha256": "26N57tL/4PdDre06RB0MyaTzQh8xkwdYEfPYP/6LKDk="
+      }
+    },
+    "ApproveDashloanDashaccountLambdaVersion5sSddjxOkB0AY4MDZRAO8Yas6CFgVGQZhZGKavSuTvk": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ApproveDashloanDashaccountLambdaFunction"
+        },
+        "CodeSha256": "26N57tL/4PdDre06RB0MyaTzQh8xkwdYEfPYP/6LKDk="
+      }
+    },
+    "MoreTymeRepaymentWorkflowRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": {
+                  "Fn::Sub": "states.${AWS::Region}.amazonaws.com"
+                }
+              },
+              "Action": "sts:AssumeRole"
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "dev-test-step-function-poc-statemachine",
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sqs:SendMessage"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "MoreTymeRepaymentWorkflow": {
+      "Type": "AWS::StepFunctions::StateMachine",
+      "Properties": {
+        "DefinitionString": {
+          "Fn::Sub": [
+            "{\n  \"StartAt\": \"Enrich Input Loan Creation\",\n  \"States\": {\n    \"Enrich Input Loan Creation\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${5d76f7b2e6b758b99bc5afdaebb10094}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          }\n        }\n      },\n      \"Next\": \"Create Loan Account\",\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\n            \"RETRYABLE_ERROR\"\n          ],\n          \"IntervalSeconds\": 3,\n          \"BackoffRate\": 2,\n          \"MaxAttempts\": 5,\n          \"MaxDelaySeconds\": 2\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\n            \"States.ALL\"\n          ],\n          \"ResultPath\": \"$.errorOutput\",\n          \"Next\": \"Notify Loan Creation Failure\"\n        }\n      ]\n    },\n    \"Create Loan Account\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${8d7d74974fc263dbc7ea746a69a656d2}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          }\n        }\n      },\n      \"Next\": \"Approve Loan Account\",\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\n            \"RETRYABLE_ERROR\"\n          ],\n          \"IntervalSeconds\": 3,\n          \"BackoffRate\": 2,\n          \"MaxAttempts\": 5,\n          \"MaxDelaySeconds\": 2\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\n            \"PROFILE_NOT_ELIGIBLE\"\n          ],\n          \"ResultPath\": \"$.errorOutput\",\n          \"Next\": \"Notify Profile Not Eligible For Creation\"\n        },\n        {\n          \"ErrorEquals\": [\n            \"States.ALL\"\n          ],\n          \"ResultPath\": \"$.errorOutput\",\n          \"Next\": \"Notify Loan Creation Failure\"\n        }\n      ]\n    },\n    \"Notify Profile Not Eligible For Creation\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${d638b87b48a53cd9c01f43d8c756ade2}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          },\n          \"messageTemplateId\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"001\"\n          }\n        }\n      },\n      \"End\": true\n    },\n    \"Approve Loan Account\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${350bb5aae5f02313eb0720836cdcb6ff}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          }\n        }\n      },\n      \"End\": true,\n      \"Retry\": [\n        {\n          \"ErrorEquals\": [\n            \"RETRYABLE_ERROR\"\n          ],\n          \"IntervalSeconds\": 3,\n          \"BackoffRate\": 2,\n          \"MaxAttempts\": 5,\n          \"MaxDelaySeconds\": 2\n        }\n      ],\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\n            \"PROFILE_NOT_ELIGIBLE\"\n          ],\n          \"ResultPath\": \"$.errorOutput\",\n          \"Next\": \"Can Notify For The First Time?\"\n        },\n        {\n          \"ErrorEquals\": [\n            \"States.ALL\"\n          ],\n          \"Next\": \"Notify Loan Creation Failure\",\n          \"ResultPath\": \"$.errorOutput\"\n        }\n      ]\n    },\n    \"Can Notify For The First Time?\": {\n      \"Type\": \"Choice\",\n      \"Choices\": [\n        {\n          \"Variable\": \"$.retryCount\",\n          \"NumericEquals\": 1,\n          \"Next\": \"Notify Profile Not Eligible For First Time Approval\"\n        }\n      ],\n      \"Default\": \"Calculate Next Interval Time\"\n    },\n    \"Notify Profile Not Eligible For First Time Approval\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${d638b87b48a53cd9c01f43d8c756ade2}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"messageTemplateId\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"002\"\n          }\n        }\n      },\n      \"Next\": \"Increase Notification Count\"\n    },\n    \"Increase Notification Count\": {\n      \"Type\": \"Pass\",\n      \"Parameters\": {\n        \"original.$\": \"$\",\n        \"new\": {\n          \"retryCount.$\": \"States.MathAdd($.retryCount, 1)\"\n        }\n      },\n      \"Next\": \"Merge Notification Input\"\n    },\n    \"Merge Notification Input\": {\n      \"Type\": \"Pass\",\n      \"Parameters\": {\n        \"merged.$\": \"States.JsonMerge($.original, $.new, false)\"\n      },\n      \"OutputPath\": \"$.merged\",\n      \"Next\": \"Calculate Next Interval Time\"\n    },\n    \"Calculate Next Interval Time\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${5468daa7e6a5d7af195878fedd31a858}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          }\n        }\n      },\n      \"Next\": \"Schedule For Retry Approval\",\n      \"Catch\": [\n        {\n          \"ErrorEquals\": [\n            \"PROFILE_NOT_ELIGIBLE\"\n          ],\n          \"ResultPath\": \"$.errorOutput\",\n          \"Next\": \"Notify Profile Not Eligible For Last Time Approval\"\n        },\n        {\n          \"ErrorEquals\": [\n            \"States.ALL\"\n          ],\n          \"Next\": \"Notify Loan Creation Failure\",\n          \"ResultPath\": \"$.errorOutput\"\n        }\n      ]\n    },\n    \"Schedule For Retry Approval\": {\n      \"Type\": \"Wait\",\n      \"TimestampPath\": \"$.nextInterval\",\n      \"Next\": \"Approve Loan Account\"\n    },\n    \"Notify Profile Not Eligible For Last Time Approval\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${d638b87b48a53cd9c01f43d8c756ade2}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          },\n          \"messageTemplateId\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"003\"\n          }\n        }\n      },\n      \"End\": true\n    },\n    \"Notify Loan Creation Failure\": {\n      \"Type\": \"Task\",\n      \"Resource\": \"arn:aws:states:::sqs:sendMessage.waitForTaskToken\",\n      \"Parameters\": {\n        \"QueueUrl\": \"${c265ac0d4596c9a9f0faa6bb53cd3009}\",\n        \"MessageBody\": {\n          \"TaskToken.$\": \"$$.Task.Token\",\n          \"Input.$\": \"$\"\n        },\n        \"MessageAttributes\": {\n          \"contentType\": {\n            \"DataType\": \"String\",\n            \"StringValue\": \"application/json\"\n          }\n        }\n      },\n      \"End\": true\n    }\n  }\n}",
+            {
+              "5d76f7b2e6b758b99bc5afdaebb10094": {
+                "Fn::Sub": "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-enrich-loan-creation-input-sfn-sqs"
+              },
+              "8d7d74974fc263dbc7ea746a69a656d2": {
+                "Fn::Sub": "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-create-loan-account-sfn-sqs"
+              },
+              "d638b87b48a53cd9c01f43d8c756ade2": {
+                "Fn::Sub": "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-notify-for-operation-sfn-sqs"
+              },
+              "350bb5aae5f02313eb0720836cdcb6ff": {
+                "Fn::Sub": "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-approve-loan-account-sfn-sqs"
+              },
+              "5468daa7e6a5d7af195878fedd31a858": {
+                "Fn::Sub": "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-calculate-next-interval-sfn-sqs"
+              },
+              "c265ac0d4596c9a9f0faa6bb53cd3009": {
+                "Fn::Sub": "https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-failure-loan-creation-sfn-sqs"
+              }
+            }
+          ]
+        },
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "MoreTymeRepaymentWorkflowRole",
+            "Arn"
+          ]
+        },
+        "StateMachineName": "MoreTymeRepaymentWorkflow"
+      },
+      "DependsOn": [
+        "MoreTymeRepaymentWorkflowRole"
+      ]
+    },
+    "CreateDashloanDashaccountEventSourceMappingSQSTplendmcacreateloanaccountsfnsqs": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [
+        "IamRoleLambdaExecution"
+      ],
+      "Properties": {
+        "BatchSize": 10,
+        "EventSourceArn": {
+          "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs"
+        },
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "CreateDashloanDashaccountLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    },
+    "ApproveDashloanDashaccountEventSourceMappingSQSTplendmcaapproveloanaccountsfnsqs": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [
+        "IamRoleLambdaExecution"
+      ],
+      "Properties": {
+        "BatchSize": 10,
+        "EventSourceArn": {
+          "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs"
+        },
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "ApproveDashloanDashaccountLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    },
+    "NotifyDashforDashoperationDashloanDashaccountEventSourceMappingSQSTplendmcanotifyforoperationsfnsqs": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [
+        "IamRoleLambdaExecution"
+      ],
+      "Properties": {
+        "BatchSize": 10,
+        "EventSourceArn": {
+          "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs"
+        },
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "NotifyDashforDashoperationDashloanDashaccountLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    },
+    "NotifyDashcreateDashloanDashfailureDashaccountEventSourceMappingSQSTplendmcafailureloancreationsfnsqs": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [
+        "IamRoleLambdaExecution"
+      ],
+      "Properties": {
+        "BatchSize": 10,
+        "EventSourceArn": {
+          "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs"
+        },
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "NotifyDashcreateDashloanDashfailureDashaccountLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    },
+    "CalculateDashnextDashintervalEventSourceMappingSQSTplendmcacalculatenextintervalsfnsqs": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [
+        "IamRoleLambdaExecution"
+      ],
+      "Properties": {
+        "BatchSize": 10,
+        "EventSourceArn": {
+          "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs"
+        },
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "CalculateDashnextDashintervalLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    },
+    "EnrichDashinputDashloanDashcreationEventSourceMappingSQSTplendmcaenrichloancreationinputsfnsqs": {
+      "Type": "AWS::Lambda::EventSourceMapping",
+      "DependsOn": [
+        "IamRoleLambdaExecution"
+      ],
+      "Properties": {
+        "BatchSize": 10,
+        "EventSourceArn": {
+          "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs"
+        },
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "EnrichDashinputDashloanDashcreationLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Enabled": true
+      }
+    },
+    "CreateLoanQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "tp-lend-mca-create-loan-account-sfn-sqs"
+      }
+    },
+    "ApproveLoanQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "tp-lend-mca-approve-loan-account-sfn-sqs"
+      }
+    },
+    "NotifyOperationQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "tp-lend-mca-notify-for-operation-sfn-sqs"
+      }
+    },
+    "NotifyLoanCreationFailureQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "tp-lend-mca-failure-loan-creation-sfn-sqs"
+      }
+    },
+    "CaculateNextIntervalQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "tp-lend-mca-calculate-next-interval-sfn-sqs"
+      }
+    },
+    "EnRichInputQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": "tp-lend-mca-enrich-loan-creation-input-sfn-sqs"
+      }
+    },
+    "LoanQueuePolicy": {
+      "Type": "AWS::SQS::QueuePolicy",
+      "Properties": {
+        "Queues": [
+          {
+            "Ref": "CreateLoanQueue"
+          },
+          {
+            "Ref": "ApproveLoanQueue"
+          },
+          {
+            "Ref": "NotifyOperationQueue"
+          },
+          {
+            "Ref": "NotifyLoanCreationFailureQueue"
+          },
+          {
+            "Ref": "CaculateNextIntervalQueue"
+          },
+          {
+            "Ref": "EnRichInputQueue"
+          }
+        ],
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sqs:ReceiveMessage",
+                "sqs:SendMessage",
+                "sqs:DeleteMessage",
+                "sqs:GetQueueUrl"
+              ],
+              "Resource": [
+                {
+                  "Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": {
+        "Ref": "ServerlessDeploymentBucket"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "PythonRequirementsLambdaLayerQualifiedArn": {
+      "Description": "Current Lambda layer version",
+      "Value": {
+        "Ref": "PythonRequirementsLambdaLayer"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-PythonRequirementsLambdaLayerQualifiedArn"
+      }
+    },
+    "PythonRequirementsLambdaLayerHash": {
+      "Description": "Current Lambda layer hash",
+      "Value": "5f457a4cefadf7b70e1385d3761b7743ca666b18",
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-PythonRequirementsLambdaLayerHash"
+      }
+    },
+    "PythonRequirementsLambdaLayerS3Key": {
+      "Description": "Current Lambda layer S3Key",
+      "Value": "serverless/test-step-function-poc/dev/1716870043712-2024-05-28T04:20:43.712Z/pythonRequirements.zip",
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-PythonRequirementsLambdaLayerS3Key"
+      }
+    },
+    "NotifyDashcreateDashloanDashfailureDashaccountLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "NotifyDashcreateDashloanDashfailureDashaccountLambdaVersione5a1bkDM6U8mu4NmsdAEcvz1MuVQVDw5UfLMkSdy38"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-NotifyDashcreateDashloanDashfailureDashaccountLambdaFunctionQualifiedArn"
+      }
+    },
+    "NotifyDashforDashoperationDashloanDashaccountLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "NotifyDashforDashoperationDashloanDashaccountLambdaVersionAsYADzxczfqgjS0HinKCprdMAO6Jfm1zSUz40DxrL8"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-NotifyDashforDashoperationDashloanDashaccountLambdaFunctionQualifiedArn"
+      }
+    },
+    "CalculateDashnextDashintervalLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "CalculateDashnextDashintervalLambdaVersionXKgpqcqMVZyVImRaqaRLDePREzL3Top9Gl6xI23i4"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-CalculateDashnextDashintervalLambdaFunctionQualifiedArn"
+      }
+    },
+    "EnrichDashinputDashloanDashcreationLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "EnrichDashinputDashloanDashcreationLambdaVersionqkI1I9lofK0bI6i60BgkthEsabDch3oRlkdqZLP1WA"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-EnrichDashinputDashloanDashcreationLambdaFunctionQualifiedArn"
+      }
+    },
+    "CreateDashloanDashaccountLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "CreateDashloanDashaccountLambdaVersionyTHOps9QcmibzzUSSH23n8LSA6e9zEkFV05SUi5FViw"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-CreateDashloanDashaccountLambdaFunctionQualifiedArn"
+      }
+    },
+    "ApproveDashloanDashaccountLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ApproveDashloanDashaccountLambdaVersion5sSddjxOkB0AY4MDZRAO8Yas6CFgVGQZhZGKavSuTvk"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-ApproveDashloanDashaccountLambdaFunctionQualifiedArn"
+      }
+    },
+    "MoreTymeRepaymentWorkflowArn": {
+      "Description": "Current StateMachine Arn",
+      "Value": {
+        "Ref": "MoreTymeRepaymentWorkflow"
+      },
+      "Export": {
+        "Name": "sls-test-step-function-poc-dev-MoreTymeRepaymentWorkflowArn"
+      }
+    }
+  }
+}

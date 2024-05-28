@@ -1,0 +1,394 @@
+service: ${self:custom.servicePrefix}-poc
+frameworkVersion: '3'
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  servicePrefix: test-step-function
+
+  # plugin: serverless-python-requirements
+  pythonRequirements:
+    slim: true
+    layer: true
+    noDeploy:
+      - pytest
+    package:
+      individually: true
+  serverless-iam-roles-per-function:
+    defaultInherit: true
+
+plugins:
+  localPath: .serverless_plugins
+  modules:
+  - serverless-python-requirements
+  - serverless-cloudformation-sub-variables
+  - serverless-step-functions
+
+provider:
+  profile: acloudguru
+  stage: local
+  runtime: python3.9
+  memorySize: 128
+  architecture: arm64
+  region: us-east-1
+  name: aws
+  environment:
+    RUNNING_STAGE: ${self:custom.stage}
+    EXTENSION_DEBUG: "false"
+    TZ: "Asia/Ho_Chi_Minh"
+  apiGateway:
+    disableDefaultEndpoint: false
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - states:StartExecution
+        - states:SendTaskSuccess
+        - states:SendTaskFailure
+      Resource:
+        - arn:aws:states:us-east-1:730335300542:stateMachine:MoreTymeRepaymentWorkflow
+
+    - Effect: Allow
+      Sid: AllowActionOnSQS
+      Action:
+        - sqs:ReceiveMessage
+        - sqs:SendMessage
+        - sqs:DeleteMessage
+        - sqs:GetQueueUrl
+      Resource:
+#       - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-mt-post-repayment-queue
+#       - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-mt-close-loan-queue
+#       - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-mt-repayment-failed-queue
+        - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs
+        - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs
+        - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs
+        - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs
+        - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs
+        - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs
+
+
+functions:
+  create-loan-account:
+    name: lambda-create-loan-account
+    handler: src/lambda_step_function/create_loan_account.handle
+    events:
+      - sqs:
+          arn: arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    package:
+      patterns:
+        - '!src/**'
+        - 'src/lambda_step_function/**'
+      individually: true
+
+  approve-loan-account:
+    name: lambda-approve-loan-account
+    handler: src/lambda_step_function/approve_loan_account.handle
+    events:
+      - sqs:
+          arn: arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs
+    layers:
+      - Ref: PythonRequirementsLambdaLayer
+    package:
+      patterns:
+        - '!src/**'
+        - 'src/lambda_step_function/**'
+      individually: true
+
+  notify-for-operation-loan-account:
+    name: lambda-notify-for-operation-failure-approve
+    handler: src/lambda_step_function/notify-for-operation_loan_account.handle
+    events:
+      - sqs:
+          arn: arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs
+    package:
+      patterns:
+        - '!src/**'
+        - 'src/lambda_step_function/**'
+      individually: true
+
+  notify-create-loan-failure-account:
+    name: lambda-notify-create-loan-failure
+    handler: src/lambda_step_function/notify_create_failure_loan.handle
+    events:
+      - sqs:
+          arn: arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs
+    package:
+      patterns:
+        - '!src/**'
+        - 'src/lambda_step_function/**'
+      individually: true
+
+  calculate-next-interval:
+    name: lambda-calculate-next-interval
+    handler: src/lambda_step_function/calculate_next_interval.handle
+    events:
+      - sqs:
+          arn: arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs
+    package:
+      patterns:
+        - '!src/**'
+        - 'src/lambda_step_function/**'
+      individually: true
+
+  enrich-input-loan-creation:
+    name: lambda-enrich-input-loan-creation
+    handler: src/lambda_step_function/enrich_input_loan_creation.handle
+    events:
+      - sqs:
+          arn: arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs
+    package:
+      patterns:
+        - '!src/**'
+        - 'src/lambda_step_function/**'
+      individually: true
+
+stepFunctions:
+  stateMachines:
+    MoreTymeRepaymentWorkflow:
+      name: MoreTymeRepaymentWorkflow
+#      role: !GetAtt LendMCAPayMongoCreationLoanSfnRole.Arn
+      definition:
+        StartAt: Enrich Input Loan Creation
+        States:
+          Enrich Input Loan Creation:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-enrich-loan-creation-input-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+            Next: Create Loan Account
+            Retry:
+              - ErrorEquals:
+                  - RETRYABLE_ERROR
+                IntervalSeconds: 3
+                BackoffRate: 2.0
+                MaxAttempts: 5
+                MaxDelaySeconds: 2
+            Catch:
+              - ErrorEquals:
+                  - States.ALL
+                ResultPath: "$.errorOutput"
+                Next: Notify Loan Creation Failure
+          Create Loan Account:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-create-loan-account-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+            Next: Approve Loan Account
+            Retry:
+              - ErrorEquals:
+                  - RETRYABLE_ERROR
+                IntervalSeconds: 3
+                BackoffRate: 2.0
+                MaxAttempts: 5
+                MaxDelaySeconds: 2
+            Catch:
+              - ErrorEquals:
+                  - PROFILE_NOT_ELIGIBLE
+                ResultPath: "$.errorOutput"
+                Next: Notify Profile Not Eligible For Creation
+              - ErrorEquals:
+                  - States.ALL
+                ResultPath: "$.errorOutput"
+                Next: Notify Loan Creation Failure
+          Notify Profile Not Eligible For Creation:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-notify-for-operation-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+                messageTemplateId:
+                  DataType: "String"
+                  StringValue: "001"
+            End: true
+          Approve Loan Account:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-approve-loan-account-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+            End: true
+            Retry:
+              - ErrorEquals:
+                  - RETRYABLE_ERROR
+                IntervalSeconds: 3
+                BackoffRate: 2.0
+                MaxAttempts: 5
+                MaxDelaySeconds: 2
+            Catch:
+              - ErrorEquals:
+                - PROFILE_NOT_ELIGIBLE
+                ResultPath: "$.errorOutput"
+                Next: Can Notify For The First Time?
+              - ErrorEquals:
+                  - States.ALL
+                Next: Notify Loan Creation Failure
+                ResultPath: "$.errorOutput"
+          Can Notify For The First Time?:
+            Type: Choice
+            Choices:
+              - Variable: $.retryCount
+                NumericEquals: 1
+                Next: Notify Profile Not Eligible For First Time Approval
+            Default: Calculate Next Interval Time
+          Notify Profile Not Eligible For First Time Approval:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-notify-for-operation-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                messageTemplateId:
+                  DataType: "String"
+                  StringValue: "002"
+            Next: Increase Notification Count
+          Increase Notification Count:
+            Type: Pass
+            Parameters:
+              original.$: $
+              new:
+                retryCount.$: States.MathAdd($.retryCount, 1)
+            Next: Merge Notification Input
+          Merge Notification Input:
+            Type: Pass
+            Parameters:
+              merged.$: States.JsonMerge($.original, $.new, false)
+            OutputPath: "$.merged"
+            Next: Calculate Next Interval Time
+          Calculate Next Interval Time:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-calculate-next-interval-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+            Next: Schedule For Retry Approval
+            Catch:
+              - ErrorEquals:
+                  - PROFILE_NOT_ELIGIBLE
+                ResultPath: "$.errorOutput"
+                Next: Notify Profile Not Eligible For Last Time Approval
+              - ErrorEquals:
+                  - States.ALL
+                Next: Notify Loan Creation Failure
+                ResultPath: "$.errorOutput"
+          Schedule For Retry Approval:
+            Type: Wait
+            TimestampPath: $.nextInterval
+            Next: Approve Loan Account
+          Notify Profile Not Eligible For Last Time Approval:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-notify-for-operation-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+                messageTemplateId:
+                  DataType: "String"
+                  StringValue: "003"
+            End: true
+          Notify Loan Creation Failure:
+            Type: Task
+            Resource: arn:aws:states:::sqs:sendMessage.waitForTaskToken
+            Parameters:
+              QueueUrl: !Sub https://sqs.${AWS::Region}.amazonaws.com/${AWS::AccountId}/tp-lend-mca-failure-loan-creation-sfn-sqs
+              MessageBody:
+                TaskToken.$: $$.Task.Token
+                Input.$: $
+              MessageAttributes:
+                contentType:
+                  DataType: "String"
+                  StringValue: "application/json"
+            End: true
+
+resources:
+  Resources:
+    CreateLoanQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: tp-lend-mca-create-loan-account-sfn-sqs
+
+    ApproveLoanQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: tp-lend-mca-approve-loan-account-sfn-sqs
+
+    NotifyOperationQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: tp-lend-mca-notify-for-operation-sfn-sqs
+
+    NotifyLoanCreationFailureQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: tp-lend-mca-failure-loan-creation-sfn-sqs
+
+    CaculateNextIntervalQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: tp-lend-mca-calculate-next-interval-sfn-sqs
+
+    EnRichInputQueue:
+      Type: "AWS::SQS::Queue"
+      Properties:
+        QueueName: tp-lend-mca-enrich-loan-creation-input-sfn-sqs
+
+    LoanQueuePolicy:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref CreateLoanQueue
+          - !Ref ApproveLoanQueue
+          - !Ref NotifyOperationQueue
+          - !Ref NotifyLoanCreationFailureQueue
+          - !Ref CaculateNextIntervalQueue
+          - !Ref EnRichInputQueue
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - sqs:ReceiveMessage
+                - sqs:SendMessage
+                - sqs:DeleteMessage
+                - sqs:GetQueueUrl
+              Resource:
+                - !Sub arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:*

@@ -1,0 +1,25 @@
+
+Packaging for stage dev
+serverless › Executing "package" across all services in parallel
+lambdas › packaging
+lambdas › Running "serverless package --stage dev"
+lambdas › Running "serverless" from node_modules
+lambdas › (node:95527) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+lambdas › (Use `node --trace-deprecation ...` to show where the warning was created)
+lambdas › Packaging test-step-function-poc for stage dev (us-east-1)
+lambdas › Serverless: serverless-cloudformation-sub-variables: Converting AWS CloudFormation Sub variables...
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-create-loan-account-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-approve-loan-account-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-notify-for-operation-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-failure-loan-creation-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-calculate-next-interval-sfn-sqs"}'
+lambdas › Serverless:  - 'arn:aws:sqs:#{AWS::Region}:#{AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs' => '{"Fn::Sub": "arn:aws:sqs:${AWS::Region}:${AWS::AccountId}:tp-lend-mca-enrich-loan-creation-input-sfn-sqs"}'
+lambdas › ✔ Service packaged (2s)
+lambdas › 1 deprecation found: run 'serverless doctor' for more details
+lambdas › packaged

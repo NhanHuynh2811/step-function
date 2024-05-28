@@ -1,0 +1,12 @@
+{
+  "service": {
+    "id": "433zsm7"
+  },
+  "components": {
+    "lambdas": {
+      "state": {
+        "detectedFrameworkVersion": "3.38.0"
+      }
+    }
+  }
+}
